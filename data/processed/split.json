@@ -1,0 +1,9 @@
+{
+    "train_batteries": [
+        "B5",
+        "B6"
+    ],
+    "test_batteries": [
+        "B7"
+    ]
+}
