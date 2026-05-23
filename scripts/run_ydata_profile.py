@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 import pandas as pd
+from ydata_profiling import ProfileReport
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,19 +30,16 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    try:
-        from ydata_profiling import ProfileReport
-    except ImportError as exc:
-        raise SystemExit(
-            "ydata-profiling is not installed. Run 'pip install ydata-profiling' first."
-        ) from exc
-
     data_file = Path(args.data_file)
     output_file = Path(args.output_file)
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_csv(data_file)
-    profile = ProfileReport(df, title=args.title, explorative=True)
+    profile = ProfileReport(
+        df,
+        title=args.title,
+        explorative=True,
+    )
     profile.to_file(output_file)
 
     print(f"Profile report created: {output_file}")
