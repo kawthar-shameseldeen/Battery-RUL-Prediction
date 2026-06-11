@@ -21,6 +21,10 @@ Running the replacement script rebuilds these files:
 
 The train/test split file is still [data/processed/split.json](C:\Users\hp\Desktop\Battery-RUL-Prediction\data\processed\split.json). If the new dataset contains different battery IDs, update that JSON before rebuilding.
 
+Feature scaling is fit on the training batteries only, then applied to the train, test, and combined processed files. This avoids leaking test-battery statistics into the training pipeline.
+
+The constant `disT` feature is kept in the raw merged dataset but removed from processed model-ready datasets, because it has only one value and cannot help the GRU/GLU learn degradation behavior.
+
 ### How to rebuild
 
 Run:

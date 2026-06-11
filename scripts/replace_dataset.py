@@ -21,6 +21,8 @@ DEFAULT_REQUIRED_COLUMNS = [
     "RUL",
 ]
 
+DROP_MODEL_FEATURE_COLUMNS = {"disT"}
+
 ALTERNATE_COLUMN_MAP = {
     "cycle": "cycle",
     "ambient_temperature": "ambient_temperature",
@@ -173,14 +175,28 @@ def load_and_merge_csvs(input_dir: Path, keep_leading_zeros: bool) -> pd.DataFra
     return merged
 
 
-def min_max_scale(df: pd.DataFrame) -> pd.DataFrame:
-    processed = df.copy()
-    feature_columns = [col for col in processed.columns if col not in {"battery_id", "RUL"}]
+def fit_min_max_params(df: pd.DataFrame) -> dict[str, tuple[float, float]]:
+    feature_columns = [col for col in df.columns if col not in {"battery_id", "RUL"}]
+    params: dict[str, tuple[float, float]] = {}
 
     for column in feature_columns:
+        numeric = pd.to_numeric(df[column], errors="raise")
+        params[column] = (numeric.min(), numeric.max())
+
+    return params
+
+
+def drop_model_feature_columns(df: pd.DataFrame) -> pd.DataFrame:
+    return df.drop(columns=[col for col in DROP_MODEL_FEATURE_COLUMNS if col in df.columns])
+
+
+def min_max_scale(
+    df: pd.DataFrame, params: dict[str, tuple[float, float]]
+) -> pd.DataFrame:
+    processed = df.copy()
+
+    for column, (column_min, column_max) in params.items():
         numeric = pd.to_numeric(processed[column], errors="raise")
-        column_min = numeric.min()
-        column_max = numeric.max()
         if column_max == column_min:
             processed[column] = 0.0
         else:
@@ -241,14 +257,18 @@ def main() -> None:
     split_file = Path(args.split_file)
 
     merged = load_and_merge_csvs(input_dir, args.keep_leading_zeros)
-    processed = min_max_scale(merged)
-
     train_ids, test_ids = load_split(split_file)
-    battery_ids = set(processed["battery_id"].unique())
+    battery_ids = set(merged["battery_id"].unique())
     validate_split(battery_ids, train_ids, test_ids)
 
-    train_dataset = processed[processed["battery_id"].isin(train_ids)]
-    test_dataset = processed[processed["battery_id"].isin(test_ids)]
+    train_raw = drop_model_feature_columns(merged[merged["battery_id"].isin(train_ids)])
+    test_raw = drop_model_feature_columns(merged[merged["battery_id"].isin(test_ids)])
+    merged_model = drop_model_feature_columns(merged)
+
+    scaling_params = fit_min_max_params(train_raw)
+    processed = min_max_scale(merged_model, scaling_params)
+    train_dataset = min_max_scale(train_raw, scaling_params)
+    test_dataset = min_max_scale(test_raw, scaling_params)
 
     for output_path in [raw_output, processed_output, train_output, test_output]:
         ensure_parent(output_path)
