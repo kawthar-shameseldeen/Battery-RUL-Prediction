@@ -25,6 +25,8 @@ Feature scaling is fit on the training batteries only, then applied to the train
 
 The constant `disT` feature is kept in the raw merged dataset but removed from processed model-ready datasets, because it has only one value and cannot help the GRU/GLU learn degradation behavior.
 
+The `cycle` column is kept unscaled as an ordering column for sequence/window creation, but it should not be used as a model input feature.
+
 ### How to rebuild
 
 Run:

@@ -22,6 +22,7 @@ DEFAULT_REQUIRED_COLUMNS = [
 ]
 
 DROP_MODEL_FEATURE_COLUMNS = {"disT"}
+NON_FEATURE_COLUMNS = {"battery_id", "cycle", "RUL"}
 
 ALTERNATE_COLUMN_MAP = {
     "cycle": "cycle",
@@ -176,7 +177,7 @@ def load_and_merge_csvs(input_dir: Path, keep_leading_zeros: bool) -> pd.DataFra
 
 
 def fit_min_max_params(df: pd.DataFrame) -> dict[str, tuple[float, float]]:
-    feature_columns = [col for col in df.columns if col not in {"battery_id", "RUL"}]
+    feature_columns = [col for col in df.columns if col not in NON_FEATURE_COLUMNS]
     params: dict[str, tuple[float, float]] = {}
 
     for column in feature_columns:
