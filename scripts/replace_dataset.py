@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Merge a folder of battery CSV files into the raw dataset expected by the "
-            "project and rebuild the processed train/test files."
+            "project and rebuild the processed train/validation/test files."
         )
     )
     parser.add_argument(
@@ -66,6 +66,11 @@ def parse_args() -> argparse.Namespace:
         help="Path for the processed training split.",
     )
     parser.add_argument(
+        "--validation-output",
+        default="data/processed/validation_dataset.csv",
+        help="Path for the processed validation split.",
+    )
+    parser.add_argument(
         "--test-output",
         default="data/processed/test_dataset.csv",
         help="Path for the processed testing split.",
@@ -73,7 +78,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--split-file",
         default="data/processed/split.json",
-        help="JSON file containing train_batteries and test_batteries.",
+        help="JSON file containing train_batteries, validation_batteries, and test_batteries.",
     )
     parser.add_argument(
         "--keep-leading-zeros",
@@ -207,35 +212,44 @@ def min_max_scale(
     return processed
 
 
-def load_split(split_file: Path) -> tuple[list[str], list[str]]:
+def load_split(split_file: Path) -> dict[str, list[str]]:
     if not split_file.exists():
         raise FileNotFoundError(
-            f"Split file '{split_file}' was not found. Create it before rebuilding train/test files."
+            f"Split file '{split_file}' was not found. Create it before rebuilding split files."
         )
 
     payload = json.loads(split_file.read_text(encoding="utf-8"))
-    return payload.get("train_batteries", []), payload.get("test_batteries", [])
+    return {
+        "train_batteries": payload.get("train_batteries", []),
+        "validation_batteries": payload.get("validation_batteries", []),
+        "test_batteries": payload.get("test_batteries", []),
+    }
 
 
-def validate_split(battery_ids: set[str], train_ids: list[str], test_ids: list[str]) -> None:
-    train_set = set(train_ids)
-    test_set = set(test_ids)
+def validate_split(battery_ids: set[str], split_groups: dict[str, list[str]]) -> None:
+    split_sets = {name: set(ids) for name, ids in split_groups.items()}
+    split_names = list(split_sets)
 
-    overlap = sorted(train_set & test_set)
-    if overlap:
-        raise ValueError(
-            "The same battery IDs appear in both train_batteries and test_batteries: "
-            + ", ".join(overlap)
-        )
+    for left_index, left_name in enumerate(split_names):
+        for right_name in split_names[left_index + 1 :]:
+            left_ids = split_sets[left_name]
+            right_ids = split_sets[right_name]
+            overlap = sorted(left_ids & right_ids)
+            if overlap:
+                raise ValueError(
+                    f"The same battery IDs appear in both {left_name} and {right_name}: "
+                    + ", ".join(overlap)
+                )
 
-    unknown = sorted((train_set | test_set) - battery_ids)
+    assigned = set().union(*split_sets.values())
+    unknown = sorted(assigned - battery_ids)
     if unknown:
         raise ValueError(
             "split.json contains battery IDs that are not present in the new dataset: "
             + ", ".join(unknown)
         )
 
-    unassigned = sorted(battery_ids - (train_set | test_set))
+    unassigned = sorted(battery_ids - assigned)
     if unassigned:
         raise ValueError(
             "Some batteries in the new dataset are missing from split.json: "
@@ -254,36 +268,55 @@ def main() -> None:
     raw_output = Path(args.raw_output)
     processed_output = Path(args.processed_output)
     train_output = Path(args.train_output)
+    validation_output = Path(args.validation_output)
     test_output = Path(args.test_output)
     split_file = Path(args.split_file)
 
     merged = load_and_merge_csvs(input_dir, args.keep_leading_zeros)
-    train_ids, test_ids = load_split(split_file)
+    split_groups = load_split(split_file)
+    train_ids = split_groups["train_batteries"]
+    validation_ids = split_groups["validation_batteries"]
+    test_ids = split_groups["test_batteries"]
     battery_ids = set(merged["battery_id"].unique())
-    validate_split(battery_ids, train_ids, test_ids)
+    validate_split(battery_ids, split_groups)
 
     train_raw = drop_model_feature_columns(merged[merged["battery_id"].isin(train_ids)])
+    validation_raw = drop_model_feature_columns(
+        merged[merged["battery_id"].isin(validation_ids)]
+    )
     test_raw = drop_model_feature_columns(merged[merged["battery_id"].isin(test_ids)])
     merged_model = drop_model_feature_columns(merged)
 
     scaling_params = fit_min_max_params(train_raw)
     processed = min_max_scale(merged_model, scaling_params)
     train_dataset = min_max_scale(train_raw, scaling_params)
+    validation_dataset = min_max_scale(validation_raw, scaling_params)
     test_dataset = min_max_scale(test_raw, scaling_params)
 
-    for output_path in [raw_output, processed_output, train_output, test_output]:
+    for output_path in [
+        raw_output,
+        processed_output,
+        train_output,
+        validation_output,
+        test_output,
+    ]:
         ensure_parent(output_path)
 
     merged.to_csv(raw_output, index=False)
     processed.to_csv(processed_output, index=False)
     train_dataset.to_csv(train_output, index=False)
+    validation_dataset.to_csv(validation_output, index=False)
     test_dataset.to_csv(test_output, index=False)
 
     print(f"Merged {len(merged)} rows from {input_dir}.")
     print(f"Battery IDs: {sorted(battery_ids)}")
+    print(f"Train batteries: {train_ids}")
+    print(f"Validation batteries: {validation_ids}")
+    print(f"Test batteries: {test_ids}")
     print(f"Raw dataset written to: {raw_output}")
     print(f"Processed dataset written to: {processed_output}")
     print(f"Train dataset rows: {len(train_dataset)} -> {train_output}")
+    print(f"Validation dataset rows: {len(validation_dataset)} -> {validation_output}")
     print(f"Test dataset rows: {len(test_dataset)} -> {test_output}")
 
 
