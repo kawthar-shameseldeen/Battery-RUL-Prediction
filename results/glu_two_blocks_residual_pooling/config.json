@@ -1,0 +1,15 @@
+{
+  "windows_path": "C:\\Users\\hp\\Desktop\\Battery-RUL-Prediction\\data\\processed\\windows_w10.npz",
+  "test_metadata_path": "C:\\Users\\hp\\Desktop\\Battery-RUL-Prediction\\data\\processed\\test_window_metadata_w10.csv",
+  "batch_size": 32,
+  "epochs": 100,
+  "patience": 10,
+  "learning_rate": 0.001,
+  "hidden_dim": 32,
+  "dropout": 0.15,
+  "dense_units": 16,
+  "glu_blocks": 2,
+  "residual_connection": "add_glu_block_1_output_to_glu_block_2_output",
+  "sequence_summary": "last_timestep_plus_global_average_pooling",
+  "seed": 42
+}
