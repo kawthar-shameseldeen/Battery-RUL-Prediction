@@ -31,3 +31,4 @@ notebook/*.csv
 *.log
 tmp/
 temp/
+.matplotlib/
