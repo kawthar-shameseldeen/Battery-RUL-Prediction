@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Local environment
+.env
+.env.*
+
+# Generated datasets and model inputs
+data/raw/
+data/processed/
+data/source_csv/*.csv
+!data/source_csv/.gitkeep
+
+# Generated experiment outputs
+results/
+
+# Notebook-generated CSV exports
+notebook/*.csv
+
+# Trained model artifacts
+*.keras
+*.h5
+*.pkl
+*.joblib
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
