@@ -16,7 +16,9 @@ data/source_csv/*.csv
 !data/source_csv/.gitkeep
 
 # Generated experiment outputs
-results/
+results/*
+!results/xai_glu_two_blocks_pooling/
+!results/xai_glu_two_blocks_pooling/**
 
 # Notebook-generated CSV exports
 notebook/*.csv

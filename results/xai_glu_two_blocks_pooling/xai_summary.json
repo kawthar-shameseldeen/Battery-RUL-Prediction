@@ -1,0 +1,77 @@
+{
+  "model_path": "C:\\Users\\PC\\Battery-RUL-Prediction\\results\\glu_two_blocks_pooling\\glu_two_blocks_pooling_model.keras",
+  "windows_path": "C:\\Users\\PC\\Battery-RUL-Prediction\\data\\processed\\windows_w10.npz",
+  "metadata_path": "C:\\Users\\PC\\Battery-RUL-Prediction\\data\\processed\\test_window_metadata_w10.csv",
+  "output_dir": "C:\\Users\\PC\\Battery-RUL-Prediction\\results\\xai_glu_two_blocks_pooling",
+  "samples_explained": 159,
+  "window_size": 10,
+  "feature_columns": [
+    "chI",
+    "chV",
+    "chT",
+    "disI",
+    "disV",
+    "BCt",
+    "SOH"
+  ],
+  "baseline_metrics": {
+    "mae": 26.165788650512695,
+    "rmse": 30.495105788483194,
+    "r2": 0.5585673451423645
+  },
+  "top_permutation_features": [
+    {
+      "feature": "BCt",
+      "baseline_rmse": 30.495105788483194,
+      "permuted_rmse_mean": 37.93836974976341,
+      "permuted_rmse_std": 0.8141423591839865,
+      "rmse_increase": 7.443263961280216,
+      "baseline_mae": 26.165788650512695,
+      "permuted_mae_mean": 31.8816499710083,
+      "mae_increase": 5.7158613204956055,
+      "baseline_r2": 0.5585673451423645,
+      "permuted_r2_mean": 0.3164639055728912,
+      "r2_drop": 0.24210343956947328
+    },
+    {
+      "feature": "SOH",
+      "baseline_rmse": 30.495105788483194,
+      "permuted_rmse_mean": 36.99349360781869,
+      "permuted_rmse_std": 0.4950166947904224,
+      "rmse_increase": 6.498387819335498,
+      "baseline_mae": 26.165788650512695,
+      "permuted_mae_mean": 31.642127990722656,
+      "mae_increase": 5.476339340209961,
+      "baseline_r2": 0.5585673451423645,
+      "permuted_r2_mean": 0.35027045011520386,
+      "r2_drop": 0.20829689502716064
+    },
+    {
+      "feature": "disV",
+      "baseline_rmse": 30.495105788483194,
+      "permuted_rmse_mean": 30.5287874227755,
+      "permuted_rmse_std": 0.010129477393726544,
+      "rmse_increase": 0.033681634292307194,
+      "baseline_mae": 26.165788650512695,
+      "permuted_mae_mean": 26.179735374450683,
+      "mae_increase": 0.01394672393798757,
+      "baseline_r2": 0.5585673451423645,
+      "permuted_r2_mean": 0.5575916230678558,
+      "r2_drop": 0.0009757220745086892
+    }
+  ],
+  "top_integrated_gradient_features": [
+    {
+      "feature": "SOH",
+      "mean_abs_integrated_gradient": 2.4678282737731934
+    },
+    {
+      "feature": "BCt",
+      "mean_abs_integrated_gradient": 2.321312189102173
+    },
+    {
+      "feature": "disI",
+      "mean_abs_integrated_gradient": 0.23612648248672485
+    }
+  ]
+}
