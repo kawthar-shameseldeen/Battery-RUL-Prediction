@@ -37,6 +37,7 @@ python -m streamlit run dashboard/app.py
 - An estimated end-of-life cycle.
 - A battery RUL trend chart.
 - Optional technical sections for model metrics, raw validation values, and experiment figures.
+- An Explainable AI section showing why the GLU model relies on certain battery signals.
 
 ## Data Source Modes
 
@@ -74,6 +75,20 @@ A sample file is included here:
 dashboard/sample_client_battery_upload.csv
 ```
 
-## Future XAI Integration
+## XAI Integration
 
-When the XAI part is ready, the dashboard can add a button that calls a new FastAPI endpoint such as `POST /explain`. That endpoint can return feature importance values for the selected window, and Streamlit can display them as a bar chart.
+The dashboard reads the generated XAI outputs from:
+
+```text
+results/xai_glu_two_blocks_pooling
+```
+
+It shows:
+
+- a client-friendly "Why did the model make this alert?" explanation after prediction.
+- integrated gradients feature importance.
+- temporal importance across the 10-cycle window.
+- permutation importance.
+- generated XAI figures.
+
+The current XAI outputs are global explanations for the selected GLU model on the test windows. A future improvement can add a FastAPI endpoint such as `POST /explain` for local explanations of each uploaded battery window.

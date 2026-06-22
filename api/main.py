@@ -12,6 +12,7 @@ from api.model_service import (
     WINDOW_SIZE,
     load_model,
     load_sample,
+    model_available,
     predict_window,
 )
 
@@ -41,7 +42,8 @@ app = FastAPI(
 
 @app.on_event("startup")
 def startup_load_model() -> None:
-    load_model()
+    if model_available():
+        load_model()
 
 
 @app.get("/")
@@ -57,10 +59,16 @@ def root() -> dict[str, Any]:
 def health() -> dict[str, Any]:
     return {
         "status": "ok",
+        "model_available": model_available(),
         "model_path": str(MODEL_PATH),
         "window_size": WINDOW_SIZE,
         "input_dim": INPUT_DIM,
         "feature_columns": FEATURE_COLUMNS,
+        "message": (
+            "Model is available for live predictions."
+            if model_available()
+            else "Model file is missing. Restore the .keras file to enable live predictions."
+        ),
     }
 
 

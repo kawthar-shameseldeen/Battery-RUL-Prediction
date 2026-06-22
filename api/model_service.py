@@ -40,6 +40,10 @@ class GLUBlock(tf.keras.layers.Layer):
         return config
 
 
+def model_available() -> bool:
+    return MODEL_PATH.exists()
+
+
 @lru_cache(maxsize=1)
 def load_model() -> tf.keras.Model:
     if not MODEL_PATH.exists():

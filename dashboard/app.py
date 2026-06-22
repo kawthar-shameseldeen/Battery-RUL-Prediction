@@ -13,8 +13,18 @@ WORKSPACE = Path(__file__).resolve().parents[1]
 RESULTS_DIR = WORKSPACE / "results" / "glu_two_blocks_pooling"
 METRICS_PATH = RESULTS_DIR / "metrics.json"
 PREDICTIONS_PATH = RESULTS_DIR / "test_predictions.csv"
+XAI_PREDICTIONS_PATH = WORKSPACE / "results" / "xai_glu_two_blocks_pooling" / "explained_samples.csv"
 PROCESSED_DATA_PATH = WORKSPACE / "data" / "processed" / "processed_data.csv"
 SAMPLE_UPLOAD_PATH = WORKSPACE / "dashboard" / "sample_client_battery_upload.csv"
+XAI_DIR = WORKSPACE / "results" / "xai_glu_two_blocks_pooling"
+XAI_SUMMARY_PATH = XAI_DIR / "xai_summary.json"
+XAI_PERMUTATION_PATH = XAI_DIR / "permutation_importance.csv"
+XAI_IG_FEATURE_PATH = XAI_DIR / "integrated_gradients_feature_importance.csv"
+XAI_TEMPORAL_PATH = XAI_DIR / "integrated_gradients_temporal_importance.csv"
+XAI_PERMUTATION_FIGURE = XAI_DIR / "permutation_importance.png"
+XAI_IG_FEATURE_FIGURE = XAI_DIR / "integrated_gradients_feature_importance.png"
+XAI_TEMPORAL_FIGURE = XAI_DIR / "integrated_gradients_temporal_importance.png"
+XAI_HEATMAP_FIGURE = XAI_DIR / "integrated_gradients_heatmap.png"
 LOSS_CURVE_PATH = RESULTS_DIR / "loss_curve.png"
 TRUE_VS_PRED_PATH = RESULTS_DIR / "true_vs_pred.png"
 ERROR_OVER_CYCLES_PATH = RESULTS_DIR / "prediction_error_over_cycles.png"
@@ -246,6 +256,35 @@ st.markdown(
     .guide-card strong {
         color: #5eead4;
     }
+    .xai-card {
+        padding: 1.05rem;
+        border-radius: 1rem;
+        background: linear-gradient(135deg, rgba(14, 116, 144, 0.18), rgba(15, 23, 42, 0.64));
+        border: 1px solid rgba(94, 234, 212, 0.18);
+        margin-top: 1rem;
+    }
+    .xai-title {
+        color: #e0f2fe;
+        font-size: 1.05rem;
+        font-weight: 800;
+        margin-bottom: 0.35rem;
+    }
+    .xai-copy {
+        color: #cbd5e1;
+        font-size: 0.92rem;
+        line-height: 1.55;
+    }
+    .xai-chip {
+        display: inline-block;
+        padding: 0.32rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(45, 212, 191, 0.12);
+        border: 1px solid rgba(45, 212, 191, 0.22);
+        color: #99f6e4;
+        font-weight: 800;
+        margin-right: 0.35rem;
+        margin-top: 0.35rem;
+    }
     hr {
         border-color: rgba(148, 163, 184, 0.16) !important;
     }
@@ -257,17 +296,57 @@ st.markdown(
 
 @st.cache_data
 def load_metrics() -> dict[str, Any]:
-    with METRICS_PATH.open("r", encoding="utf-8") as file:
-        return json.load(file)
+    if METRICS_PATH.exists():
+        with METRICS_PATH.open("r", encoding="utf-8") as file:
+            return json.load(file)
+
+    if XAI_SUMMARY_PATH.exists():
+        with XAI_SUMMARY_PATH.open("r", encoding="utf-8") as file:
+            summary = json.load(file)
+        baseline = summary.get("baseline_metrics", {})
+        return {
+            "mae": baseline.get("mae", 0.0),
+            "rmse": baseline.get("rmse", 0.0),
+            "r2": baseline.get("r2", 0.0),
+            "feature_columns": summary.get(
+                "feature_columns",
+                ["chI", "chV", "chT", "disI", "disV", "BCt", "SOH"],
+            ),
+            "window_size": summary.get("window_size", 10),
+            "test_shape": [summary.get("samples_explained", 0), summary.get("window_size", 10), 7],
+        }
+
+    st.error(
+        "Dashboard metrics were not found. Expected either the GLU metrics file "
+        "or the XAI summary file."
+    )
+    st.stop()
 
 
 @st.cache_data
 def load_predictions() -> pd.DataFrame:
-    return pd.read_csv(PREDICTIONS_PATH)
+    if PREDICTIONS_PATH.exists():
+        predictions = pd.read_csv(PREDICTIONS_PATH)
+    elif XAI_PREDICTIONS_PATH.exists():
+        predictions = pd.read_csv(XAI_PREDICTIONS_PATH)
+    else:
+        st.error(
+            "Prediction results were not found. Expected either "
+            "`results/glu_two_blocks_pooling/test_predictions.csv` or "
+            "`results/xai_glu_two_blocks_pooling/explained_samples.csv`."
+        )
+        st.stop()
+
+    if "prediction_error" not in predictions.columns:
+        predictions["prediction_error"] = predictions["predicted_RUL"] - predictions["true_RUL"]
+    return predictions
 
 
 @st.cache_data
 def load_processed_cycle_data() -> pd.DataFrame:
+    if not PROCESSED_DATA_PATH.exists():
+        return pd.DataFrame()
+
     processed = pd.read_csv(PROCESSED_DATA_PATH)
     feature_columns = ["chI", "chV", "chT", "disI", "disV", "BCt", "SOH"]
     cycle_columns = ["battery_id", "cycle", *feature_columns, "RUL"]
@@ -278,6 +357,21 @@ def load_processed_cycle_data() -> pd.DataFrame:
         .sort_values(["battery_id", "cycle"])
         .reset_index(drop=True)
     )
+
+
+@st.cache_data
+def load_xai_summary() -> dict[str, Any]:
+    if not XAI_SUMMARY_PATH.exists():
+        return {}
+    with XAI_SUMMARY_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+@st.cache_data
+def load_xai_table(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
 
 
 def prepare_uploaded_cycle_data(uploaded_df: pd.DataFrame) -> pd.DataFrame:
@@ -336,6 +430,14 @@ def status_style(status: str) -> dict[str, str]:
     return styles.get(status, styles["warning"])
 
 
+def classify_prediction_status(predicted_rul: float) -> str:
+    if predicted_rul <= 20:
+        return "critical"
+    if predicted_rul <= 50:
+        return "warning"
+    return "healthy"
+
+
 def call_predict_sample(api_url: str, split: str, index: int) -> dict[str, Any]:
     response = requests.get(
         f"{api_url.rstrip('/')}/predict-sample/{split}/{index}",
@@ -392,6 +494,7 @@ def render_prediction_result(
     card_col3.metric("Alert level", style["short_label"])
 
     render_alert_card(status, predicted_rul, end_cycle)
+    render_xai_client_summary()
 
     with st.expander("Technical validation values"):
         st.write("These values are useful for project evaluation, but a normal client does not need them.")
@@ -403,6 +506,34 @@ def render_prediction_result(
         else:
             tech_col2.metric("True RUL", "Not available")
             tech_col3.metric("Prediction error", "Not available")
+
+
+def render_xai_client_summary() -> None:
+    xai_summary = load_xai_summary()
+    if not xai_summary:
+        return
+
+    top_features = [
+        item["feature"]
+        for item in xai_summary.get("top_integrated_gradient_features", [])[:3]
+    ]
+    chips = "".join([f'<span class="xai-chip">{feature}</span>' for feature in top_features])
+
+    st.markdown(
+        f"""
+        <div class="xai-card">
+            <div class="xai-title">Why did the model make this battery alert?</div>
+            <div class="xai-copy">
+                The explanation module shows that the model mostly uses battery health and capacity-related signals.
+                The strongest global contributors are:
+                <br>{chips}
+                <br><br>
+                In simple words, the model is mainly checking how the battery capacity and health condition change across the latest 10-cycle window.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_stat_card(label: str, value: str, copy: str) -> None:
@@ -432,6 +563,10 @@ st.markdown(
 metrics = load_metrics()
 predictions = load_predictions()
 processed_cycle_data = load_processed_cycle_data()
+xai_summary = load_xai_summary()
+xai_permutation = load_xai_table(XAI_PERMUTATION_PATH)
+xai_ig_feature = load_xai_table(XAI_IG_FEATURE_PATH)
+xai_temporal = load_xai_table(XAI_TEMPORAL_PATH)
 feature_columns = metrics["feature_columns"]
 window_size = int(metrics["window_size"])
 
@@ -507,63 +642,70 @@ with left_col:
         st.write(f"Battery **{battery_id}**, cycles **{start_cycle}-{end_cycle}**")
 
         if st.button("Check Battery Health", type="primary"):
-            try:
-                result = call_predict_sample(api_url, "test", selected_index)
-                render_prediction_result(
-                    result=result,
-                    true_rul=true_rul,
-                    end_cycle=end_cycle,
-                    show_true_values=True,
-                )
-            except requests.exceptions.RequestException as exc:
-                st.error("Could not reach FastAPI. Please start the API server first.")
-                st.code(str(exc))
+            predicted_rul = float(selected_row["predicted_RUL"])
+            result = {
+                "predicted_rul": predicted_rul,
+                "status": classify_prediction_status(predicted_rul),
+            }
+            render_prediction_result(
+                result=result,
+                true_rul=true_rul,
+                end_cycle=end_cycle,
+                show_true_values=True,
+            )
 
     elif data_source == "All processed batteries":
         st.caption("Uses the already-preprocessed project CSV for demonstration across batteries.")
-        available_batteries = processed_cycle_data["battery_id"].unique().tolist()
-        selected_battery = st.selectbox("Select battery", available_batteries)
-        battery_cycle_data = processed_cycle_data[
-            processed_cycle_data["battery_id"] == selected_battery
-        ].reset_index(drop=True)
-
-        max_window_start = len(battery_cycle_data) - window_size
-        selected_start = st.slider(
-            "Select the current cycle window",
-            min_value=0,
-            max_value=max_window_start,
-            value=0,
-        )
-
-        selected_window = battery_cycle_data.iloc[
-            selected_start : selected_start + window_size
-        ]
-        start_cycle = int(selected_window["cycle"].iloc[0])
-        end_cycle = int(selected_window["cycle"].iloc[-1])
-        true_rul = float(selected_window["RUL"].iloc[-1])
-
-        st.write(f"Battery **{selected_battery}**, cycles **{start_cycle}-{end_cycle}**")
-
-        if st.button("Check Battery Health", type="primary"):
-            try:
-                window = selected_window.loc[:, feature_columns].values.tolist()
-                result = call_predict_window(api_url, window)
-                render_prediction_result(
-                    result=result,
-                    true_rul=true_rul,
-                    end_cycle=end_cycle,
-                    show_true_values=True,
-                )
-            except requests.exceptions.RequestException as exc:
-                st.error("Could not reach FastAPI. Please start the API server first.")
-                st.code(str(exc))
-
-        with st.expander("Selected model input"):
-            st.dataframe(
-                selected_window.loc[:, ["battery_id", "cycle", *feature_columns, "RUL"]],
-                use_container_width=True,
-                hide_index=True,
+        if processed_cycle_data.empty:
+            st.warning(
+                "`data/processed/processed_data.csv` is missing in this branch, "
+                "so this mode is currently unavailable."
             )
+            battery_cycle_data = pd.DataFrame()
+        else:
+            available_batteries = processed_cycle_data["battery_id"].unique().tolist()
+            selected_battery = st.selectbox("Select battery", available_batteries)
+            battery_cycle_data = processed_cycle_data[
+                processed_cycle_data["battery_id"] == selected_battery
+            ].reset_index(drop=True)
+
+            max_window_start = len(battery_cycle_data) - window_size
+            selected_start = st.slider(
+                "Select the current cycle window",
+                min_value=0,
+                max_value=max_window_start,
+                value=0,
+            )
+
+            selected_window = battery_cycle_data.iloc[
+                selected_start : selected_start + window_size
+            ]
+            start_cycle = int(selected_window["cycle"].iloc[0])
+            end_cycle = int(selected_window["cycle"].iloc[-1])
+            true_rul = float(selected_window["RUL"].iloc[-1])
+
+            st.write(f"Battery **{selected_battery}**, cycles **{start_cycle}-{end_cycle}**")
+
+            if st.button("Check Battery Health", type="primary"):
+                try:
+                    window = selected_window.loc[:, feature_columns].values.tolist()
+                    result = call_predict_window(api_url, window)
+                    render_prediction_result(
+                        result=result,
+                        true_rul=true_rul,
+                        end_cycle=end_cycle,
+                        show_true_values=True,
+                    )
+                except requests.exceptions.RequestException as exc:
+                    st.error("Could not reach FastAPI. Please start the API server first.")
+                    st.code(str(exc))
+
+            with st.expander("Selected model input"):
+                st.dataframe(
+                    selected_window.loc[:, ["battery_id", "cycle", *feature_columns, "RUL"]],
+                    use_container_width=True,
+                    hide_index=True,
+                )
     else:
         st.caption("Upload a preprocessed CSV with the same model feature format.")
         if SAMPLE_UPLOAD_PATH.exists():
@@ -654,9 +796,12 @@ with right_col:
         st.line_chart(trend_data)
         st.caption("The trend compares the real RUL and model-predicted RUL for B6.")
     elif data_source == "All processed batteries":
-        trend_data = battery_cycle_data.set_index("cycle")[["RUL"]]
-        st.line_chart(trend_data)
-        st.caption("This chart shows how the true RUL decreases over battery cycles.")
+        if "battery_cycle_data" in locals() and not battery_cycle_data.empty:
+            trend_data = battery_cycle_data.set_index("cycle")[["RUL"]]
+            st.line_chart(trend_data)
+            st.caption("This chart shows how the true RUL decreases over battery cycles.")
+        else:
+            st.info("Processed battery data is unavailable in this branch.")
     else:
         if "uploaded_cycle_data" in locals() and not uploaded_cycle_data.empty:
             if "RUL" in battery_cycle_data.columns:
@@ -697,6 +842,63 @@ with st.expander("Technical model performance"):
         st.subheader("Prediction Error Over Cycles")
         error_data = predictions.set_index("end_cycle")[["prediction_error"]]
         st.line_chart(error_data)
+
+with st.expander("Explainable AI: why the model predicts this way"):
+    if xai_summary:
+        st.write(
+            "XAI explains which inputs the selected GLU model relied on most. "
+            "This section is useful for supervisors, developers, and technical users."
+        )
+
+        xai_col1, xai_col2 = st.columns(2)
+        with xai_col1:
+            st.subheader("Most important features")
+            if not xai_ig_feature.empty:
+                chart_data = xai_ig_feature.set_index("feature")[["mean_abs_integrated_gradient"]]
+                st.bar_chart(chart_data)
+                st.caption(
+                    "Integrated gradients show the strongest contribution came from SOH and BCt."
+                )
+            else:
+                st.info("Integrated gradients feature table was not found.")
+
+        with xai_col2:
+            st.subheader("Most important time step")
+            if not xai_temporal.empty:
+                temporal_chart = xai_temporal.set_index("window_step")[["mean_abs_integrated_gradient"]]
+                st.line_chart(temporal_chart)
+                st.caption(
+                    "The last step in the 10-cycle window has the highest attribution, "
+                    "which means the model strongly uses the most recent cycle."
+                )
+            else:
+                st.info("Temporal XAI table was not found.")
+
+        st.subheader("Permutation importance")
+        if not xai_permutation.empty:
+            permutation_display = xai_permutation[
+                ["feature", "rmse_increase", "mae_increase", "r2_drop"]
+            ].copy()
+            st.dataframe(permutation_display, use_container_width=True, hide_index=True)
+            st.caption(
+                "Permutation importance checks how much performance worsens when each feature is shuffled. "
+                "BCt and SOH caused the largest performance drop, so they are the most important globally."
+            )
+        else:
+            st.info("Permutation importance table was not found.")
+
+        st.subheader("Generated XAI figures")
+        fig_a, fig_b, fig_c, fig_d = st.columns(4)
+        if XAI_PERMUTATION_FIGURE.exists():
+            fig_a.image(str(XAI_PERMUTATION_FIGURE), caption="Permutation Importance")
+        if XAI_IG_FEATURE_FIGURE.exists():
+            fig_b.image(str(XAI_IG_FEATURE_FIGURE), caption="Integrated Gradients Features")
+        if XAI_TEMPORAL_FIGURE.exists():
+            fig_c.image(str(XAI_TEMPORAL_FIGURE), caption="Temporal Importance")
+        if XAI_HEATMAP_FIGURE.exists():
+            fig_d.image(str(XAI_HEATMAP_FIGURE), caption="Feature-Time Heatmap")
+    else:
+        st.info("XAI results were not found. Run `python scripts/explain_glu_two_blocks_pooling.py` first.")
 
 with st.expander("Experiment figures"):
     fig_col1, fig_col2, fig_col3 = st.columns(3)
