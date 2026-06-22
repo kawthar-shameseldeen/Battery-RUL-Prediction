@@ -328,6 +328,46 @@ The development path showed an important pattern:
 The best improvement was not simply increasing size. The best improvement was
 using the sequence better and adding one extra gated transformation.
 
+## XAI for the Approved GLU Model
+
+After supervisor approval, the next step is explainable AI (XAI) for the
+selected model:
+
+```text
+Two GLU Blocks + Pooling
+```
+
+The XAI script uses two complementary methods:
+
+- permutation importance: measures how much RMSE worsens when one feature is
+  shuffled
+- integrated gradients: estimates how strongly each feature and each step in the
+  10-cycle window contributes to the prediction
+
+Run:
+
+```powershell
+python scripts/explain_glu_two_blocks_pooling.py
+```
+
+The script writes outputs to:
+
+```text
+results/xai_glu_two_blocks_pooling
+```
+
+Important XAI outputs:
+
+- `permutation_importance.csv`
+- `integrated_gradients_feature_importance.csv`
+- `integrated_gradients_temporal_importance.csv`
+- `integrated_gradients_heatmap.csv`
+- `xai_summary.json`
+- `permutation_importance.png`
+- `integrated_gradients_feature_importance.png`
+- `integrated_gradients_temporal_importance.png`
+- `integrated_gradients_heatmap.png`
+
 ## Result Files
 
 Important result folders:
@@ -371,6 +411,7 @@ Main GLU scripts:
 - `scripts/train_glu_two_blocks_residual_pooling.py`
 - `scripts/cross_validate_glu_two_blocks_pooling.py`
 - `scripts/plot_glu_results_summary.py`
+- `scripts/explain_glu_two_blocks_pooling.py`
 
 To rerun the selected best single-split GLU model:
 
@@ -388,4 +429,10 @@ To regenerate the summary plots:
 
 ```powershell
 python scripts/plot_glu_results_summary.py
+```
+
+To generate XAI outputs for the approved GLU model:
+
+```powershell
+python scripts/explain_glu_two_blocks_pooling.py
 ```
