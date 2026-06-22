@@ -1,0 +1,31 @@
+{
+  "fold": 3,
+  "train_batteries": [
+    "B6",
+    "B18"
+  ],
+  "validation_batteries": [
+    "B5"
+  ],
+  "test_batteries": [
+    "B7"
+  ],
+  "window_size": 10,
+  "feature_columns": [
+    "chI",
+    "chV",
+    "chT",
+    "disI",
+    "disV",
+    "BCt",
+    "SOH"
+  ],
+  "batch_size": 32,
+  "epochs": 100,
+  "patience": 10,
+  "learning_rate": 0.001,
+  "hidden_dim": 32,
+  "dropout": 0.15,
+  "dense_units": 16,
+  "seed": 45
+}

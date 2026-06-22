@@ -1,0 +1,14 @@
+{
+  "fold": 2,
+  "train_batteries": "B5,B7",
+  "validation_batteries": "B18",
+  "test_batteries": "B6",
+  "mae": 26.9033145904541,
+  "rmse": 31.444085767997077,
+  "r2": 0.5306658744812012,
+  "test_loss_mse": 988.73046875,
+  "test_metric_mae": 26.903316497802734,
+  "train_windows": 318,
+  "validation_windows": 123,
+  "test_windows": 159
+}

@@ -9,25 +9,11 @@ env/
 .env
 .env.*
 
-# Generated datasets and model inputs
-data/raw/
-data/processed/
-data/source_csv/*.csv
-!data/source_csv/.gitkeep
-
-# Generated experiment outputs
-results/
-
-# Notebook-generated CSV exports
-notebook/*.csv
-
-# Trained model artifacts
-*.keras
-*.h5
-*.pkl
-*.joblib
+# XAI outputs belong on the xai-glu branch
+results/xai_glu_two_blocks_pooling/
 
 # Logs and temporary files
 *.log
 tmp/
 temp/
+.matplotlib/

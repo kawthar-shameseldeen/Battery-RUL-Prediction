@@ -1,0 +1,12 @@
+{
+    "train_batteries": [
+        "B5",
+        "B7"
+    ],
+    "validation_batteries": [
+        "B18"
+    ],
+    "test_batteries": [
+        "B6"
+    ]
+}
