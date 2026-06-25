@@ -982,6 +982,67 @@ with st.expander("Model Update Center: train a candidate GLU model"):
             elif latest_comparison:
                 st.info("Latest recommendation: keep the current production model.")
 
+            st.markdown("---")
+            st.subheader("View candidate details")
+            selected_candidate = st.selectbox(
+                "Choose candidate run",
+                options=candidate_summaries,
+                format_func=lambda item: f"{item.get('candidate_name')} ({item.get('modified_time')})",
+            )
+
+            selected_metrics = selected_candidate.get("candidate_metrics", {})
+            selected_comparison = selected_candidate.get("comparison", {})
+            selected_dataset = selected_candidate.get("dataset_summary", {})
+            selected_dir = Path(selected_candidate.get("candidate_dir", ""))
+
+            detail_col1, detail_col2, detail_col3 = st.columns(3)
+            detail_col1.metric("Candidate MAE", f"{selected_metrics.get('mae', 0):.2f}")
+            detail_col2.metric("Candidate RMSE", f"{selected_metrics.get('rmse', 0):.2f}")
+            detail_col3.metric("Candidate R2", f"{selected_metrics.get('r2', 0):.3f}")
+
+            reference_metrics = selected_comparison.get("reference_metrics", {})
+            if reference_metrics:
+                ref_col1, ref_col2, ref_col3 = st.columns(3)
+                ref_col1.metric("Reference MAE", f"{reference_metrics.get('mae', 0):.2f}")
+                ref_col2.metric("Reference RMSE", f"{reference_metrics.get('rmse', 0):.2f}")
+                ref_col3.metric("Reference R2", f"{reference_metrics.get('r2', 0):.3f}")
+
+            recommendation = selected_comparison.get("recommendation", "review_manually")
+            improvement = selected_comparison.get("rmse_improvement_percent")
+            if recommendation == "recommend_update":
+                st.success(
+                    "Recommendation: candidate may improve the model. "
+                    "Review carefully before approving production replacement."
+                )
+            else:
+                st.info("Recommendation: keep the current production model.")
+
+            if improvement is not None:
+                st.write(f"RMSE improvement compared with reference: **{improvement:.2f}%**")
+            if selected_comparison.get("decision_rule"):
+                st.caption(selected_comparison["decision_rule"])
+
+            with st.expander("Dataset and split details"):
+                st.json(selected_dataset)
+
+            with st.expander("Candidate output files and plots"):
+                st.caption(f"Candidate folder: {selected_dir}")
+                plot_col1, plot_col2, plot_col3 = st.columns(3)
+                loss_plot = selected_dir / "loss_curve.png"
+                true_pred_plot = selected_dir / "true_vs_pred.png"
+                error_plot = selected_dir / "prediction_error_over_cycles.png"
+                if loss_plot.exists():
+                    plot_col1.image(str(loss_plot), caption="Training vs Validation Loss")
+                if true_pred_plot.exists():
+                    plot_col2.image(str(true_pred_plot), caption="True RUL vs Predicted RUL")
+                if error_plot.exists():
+                    plot_col3.image(str(error_plot), caption="Prediction Error over Cycles")
+
+                predictions_path = selected_dir / "test_predictions.csv"
+                if predictions_path.exists():
+                    preview_df = pd.read_csv(predictions_path).head(20)
+                    st.dataframe(preview_df, use_container_width=True, hide_index=True)
+
 with st.expander("Technical model performance"):
     metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
     metric_col1.metric("MAE", f"{metrics['mae']:.2f}")

@@ -113,5 +113,6 @@ The training workflow:
 - evaluates MAE, RMSE, and R2.
 - compares the candidate against the production model when available.
 - saves the candidate under `model_registry/candidates`.
+- provides a View Details section for each candidate, including metrics, comparison rule, dataset summary, plots, and prediction preview.
 
 The feature does not automatically replace the production model. The dashboard only gives a recommendation, and any production update should require manual/admin approval.
