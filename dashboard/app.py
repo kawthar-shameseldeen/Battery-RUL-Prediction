@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import re
+import subprocess
+import sys
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +32,10 @@ XAI_HEATMAP_FIGURE = XAI_DIR / "integrated_gradients_heatmap.png"
 LOSS_CURVE_PATH = RESULTS_DIR / "loss_curve.png"
 TRUE_VS_PRED_PATH = RESULTS_DIR / "true_vs_pred.png"
 ERROR_OVER_CYCLES_PATH = RESULTS_DIR / "prediction_error_over_cycles.png"
+CANDIDATE_TRAINING_SCRIPT = WORKSPACE / "scripts" / "train_candidate_glu.py"
+MODEL_REGISTRY_DIR = WORKSPACE / "model_registry"
+CANDIDATE_UPLOAD_DIR = MODEL_REGISTRY_DIR / "uploads"
+CANDIDATE_RESULTS_DIR = MODEL_REGISTRY_DIR / "candidates"
 
 DEFAULT_API_URL = "http://127.0.0.1:8000"
 
@@ -372,6 +380,67 @@ def load_xai_table(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
     return pd.read_csv(path)
+
+
+@st.cache_data
+def load_candidate_summaries() -> list[dict[str, Any]]:
+    if not CANDIDATE_RESULTS_DIR.exists():
+        return []
+
+    summaries: list[dict[str, Any]] = []
+    for summary_path in sorted(
+        CANDIDATE_RESULTS_DIR.glob("*/comparison_summary.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    ):
+        try:
+            payload = json.loads(summary_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        payload["candidate_dir"] = str(summary_path.parent)
+        payload["candidate_name"] = summary_path.parent.name
+        payload["modified_time"] = datetime.fromtimestamp(
+            summary_path.stat().st_mtime
+        ).strftime("%Y-%m-%d %H:%M:%S")
+        summaries.append(payload)
+    return summaries
+
+
+def safe_filename(filename: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "_", filename.strip())
+    return cleaned or "uploaded_dataset.csv"
+
+
+def save_training_upload(uploaded_file) -> Path:
+    CANDIDATE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    upload_path = CANDIDATE_UPLOAD_DIR / f"{timestamp}_{safe_filename(uploaded_file.name)}"
+    upload_path.write_bytes(uploaded_file.getbuffer())
+    return upload_path
+
+
+def run_candidate_training(dataset_path: Path, epochs: int, patience: int) -> subprocess.CompletedProcess:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = CANDIDATE_RESULTS_DIR / f"candidate_{timestamp}"
+    command = [
+        sys.executable,
+        str(CANDIDATE_TRAINING_SCRIPT),
+        "--dataset",
+        str(dataset_path),
+        "--output-dir",
+        str(output_dir),
+        "--epochs",
+        str(epochs),
+        "--patience",
+        str(patience),
+    ]
+    return subprocess.run(
+        command,
+        cwd=WORKSPACE,
+        capture_output=True,
+        text=True,
+        timeout=3600,
+    )
 
 
 def prepare_uploaded_cycle_data(uploaded_df: pd.DataFrame) -> pd.DataFrame:
@@ -825,6 +894,93 @@ with right_col:
         """,
         unsafe_allow_html=True,
     )
+
+with st.expander("Model Update Center: train a candidate GLU model"):
+    st.write(
+        "This admin feature trains a new candidate using the selected GLU architecture "
+        "and compares it with the current approved model. It does not replace the "
+        "production model automatically."
+    )
+    st.warning(
+        "Use this only with datasets that include `battery_id`, `cycle`, the seven "
+        "model features, and `RUL`. Training can take several minutes."
+    )
+
+    update_col1, update_col2 = st.columns([1, 1])
+    with update_col1:
+        training_upload = st.file_uploader(
+            "Upload training dataset CSV",
+            type=["csv"],
+            key="candidate_training_upload",
+        )
+        candidate_epochs = st.number_input(
+            "Epochs",
+            min_value=1,
+            max_value=100,
+            value=30,
+            step=1,
+            help="Use 30 for a faster demo, or 100 for the full training setting.",
+        )
+        candidate_patience = st.number_input(
+            "Early stopping patience",
+            min_value=1,
+            max_value=20,
+            value=10,
+            step=1,
+        )
+
+        if st.button("Train Candidate GLU Model"):
+            if training_upload is None:
+                st.error("Please upload a CSV dataset first.")
+            else:
+                dataset_path = save_training_upload(training_upload)
+                with st.spinner("Training candidate model. This may take a few minutes..."):
+                    result = run_candidate_training(
+                        dataset_path=dataset_path,
+                        epochs=int(candidate_epochs),
+                        patience=int(candidate_patience),
+                    )
+
+                if result.returncode == 0:
+                    st.success("Candidate training completed.")
+                    st.cache_data.clear()
+                    st.code(result.stdout[-3000:] or "Training completed.")
+                else:
+                    st.error("Candidate training failed.")
+                    st.code(result.stderr[-3000:] or result.stdout[-3000:])
+
+    with update_col2:
+        st.subheader("Latest candidate results")
+        candidate_summaries = load_candidate_summaries()
+        if not candidate_summaries:
+            st.info("No candidate models have been trained yet.")
+        else:
+            rows = []
+            for summary in candidate_summaries[:5]:
+                metrics_payload = summary.get("candidate_metrics", {})
+                comparison_payload = summary.get("comparison", {})
+                rows.append(
+                    {
+                        "candidate": summary.get("candidate_name"),
+                        "created": summary.get("modified_time"),
+                        "mae": metrics_payload.get("mae"),
+                        "rmse": metrics_payload.get("rmse"),
+                        "r2": metrics_payload.get("r2"),
+                        "recommendation": comparison_payload.get("recommendation"),
+                        "rmse_improvement_%": comparison_payload.get("rmse_improvement_percent"),
+                    }
+                )
+
+            candidate_df = pd.DataFrame(rows)
+            st.dataframe(candidate_df, use_container_width=True, hide_index=True)
+
+            latest = candidate_summaries[0]
+            latest_comparison = latest.get("comparison", {})
+            st.caption(f"Latest candidate folder: {latest.get('candidate_dir')}")
+            if latest_comparison.get("recommendation") == "recommend_update":
+                st.success("Latest recommendation: candidate may improve the model. Review before approving.")
+            elif latest_comparison:
+                st.info("Latest recommendation: keep the current production model.")
 
 with st.expander("Technical model performance"):
     metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)

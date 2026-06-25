@@ -92,3 +92,26 @@ It shows:
 - generated XAI figures.
 
 The current XAI outputs are global explanations for the selected GLU model on the test windows. A future improvement can add a FastAPI endpoint such as `POST /explain` for local explanations of each uploaded battery window.
+
+## Model Update Center
+
+The dashboard includes an admin-only Model Update Center. This feature lets an admin upload a training dataset, train a candidate `Two GLU Blocks + Pooling` model, and compare it with the current approved model.
+
+The uploaded training CSV must include:
+
+```text
+battery_id, cycle, chI, chV, chT, disI, disV, BCt, SOH, RUL
+```
+
+The training workflow:
+
+- validates the uploaded dataset.
+- aggregates rows by `battery_id + cycle`.
+- fits scaling on the candidate training split only.
+- creates 10-cycle windows.
+- trains the selected GLU architecture.
+- evaluates MAE, RMSE, and R2.
+- compares the candidate against the production model when available.
+- saves the candidate under `model_registry/candidates`.
+
+The feature does not automatically replace the production model. The dashboard only gives a recommendation, and any production update should require manual/admin approval.
