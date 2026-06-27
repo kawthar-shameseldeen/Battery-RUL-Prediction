@@ -419,7 +419,12 @@ def save_training_upload(uploaded_file) -> Path:
     return upload_path
 
 
-def run_candidate_training(dataset_path: Path, epochs: int, patience: int) -> subprocess.CompletedProcess:
+def run_candidate_training(
+    dataset_path: Path,
+    epochs: int,
+    patience: int,
+    cross_validate: bool,
+) -> subprocess.CompletedProcess:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = CANDIDATE_RESULTS_DIR / f"candidate_{timestamp}"
     command = [
@@ -434,6 +439,8 @@ def run_candidate_training(dataset_path: Path, epochs: int, patience: int) -> su
         "--patience",
         str(patience),
     ]
+    if cross_validate:
+        command.append("--cross-validate")
     return subprocess.run(
         command,
         cwd=WORKSPACE,
@@ -928,6 +935,11 @@ with st.expander("Model Update Center: train a candidate GLU model"):
             value=10,
             step=1,
         )
+        candidate_cross_validate = st.checkbox(
+            "Run leave-one-battery-out cross-validation",
+            value=False,
+            help="More reliable, but trains multiple models and takes longer.",
+        )
 
         if st.button("Train Candidate GLU Model"):
             if training_upload is None:
@@ -939,6 +951,7 @@ with st.expander("Model Update Center: train a candidate GLU model"):
                         dataset_path=dataset_path,
                         epochs=int(candidate_epochs),
                         patience=int(candidate_patience),
+                        cross_validate=bool(candidate_cross_validate),
                     )
 
                 if result.returncode == 0:
@@ -993,6 +1006,7 @@ with st.expander("Model Update Center: train a candidate GLU model"):
             selected_metrics = selected_candidate.get("candidate_metrics", {})
             selected_comparison = selected_candidate.get("comparison", {})
             selected_dataset = selected_candidate.get("dataset_summary", {})
+            selected_cv = selected_candidate.get("cross_validation", {})
             selected_dir = Path(selected_candidate.get("candidate_dir", ""))
 
             detail_col1, detail_col2, detail_col3 = st.columns(3)
@@ -1024,6 +1038,28 @@ with st.expander("Model Update Center: train a candidate GLU model"):
 
             with st.expander("Dataset and split details"):
                 st.json(selected_dataset)
+
+            with st.expander("Cross-validation details"):
+                if selected_cv.get("available"):
+                    cv_col1, cv_col2, cv_col3 = st.columns(3)
+                    cv_col1.metric(
+                        "CV MAE",
+                        f"{selected_cv.get('mae_mean', 0):.2f} +/- {selected_cv.get('mae_std', 0):.2f}",
+                    )
+                    cv_col2.metric(
+                        "CV RMSE",
+                        f"{selected_cv.get('rmse_mean', 0):.2f} +/- {selected_cv.get('rmse_std', 0):.2f}",
+                    )
+                    cv_col3.metric(
+                        "CV R2",
+                        f"{selected_cv.get('r2_mean', 0):.3f} +/- {selected_cv.get('r2_std', 0):.3f}",
+                    )
+                    fold_metrics_path = Path(selected_cv.get("fold_metrics_path", ""))
+                    if fold_metrics_path.exists():
+                        fold_df = pd.read_csv(fold_metrics_path)
+                        st.dataframe(fold_df, use_container_width=True, hide_index=True)
+                else:
+                    st.info(selected_cv.get("reason", "Cross-validation was not available for this candidate."))
 
             with st.expander("Candidate output files and plots"):
                 st.caption(f"Candidate folder: {selected_dir}")

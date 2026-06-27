@@ -92,6 +92,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--patience", type=int, default=PATIENCE)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument("--seed", type=int, default=SEED)
+    parser.add_argument(
+        "--cross-validate",
+        action="store_true",
+        help="Run leave-one-battery-out cross-validation after candidate training.",
+    )
     return parser.parse_args()
 
 
@@ -325,6 +330,39 @@ def plot_prediction_error(metadata: pd.DataFrame, y_true: np.ndarray, y_pred: np
     plt.close()
 
 
+def train_and_predict(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+    X_test: np.ndarray,
+    epochs: int,
+    patience: int,
+    batch_size: int,
+) -> tuple[tf.keras.Model, tf.keras.callbacks.History, np.ndarray]:
+    model = build_model(sequence_length=X_train.shape[1], input_dim=X_train.shape[2])
+    callbacks = [
+        tf.keras.callbacks.EarlyStopping(
+            monitor="val_loss",
+            patience=patience,
+            restore_best_weights=True,
+            verbose=1,
+        )
+    ]
+    history = model.fit(
+        X_train,
+        y_train,
+        validation_data=(X_val, y_val),
+        epochs=epochs,
+        batch_size=batch_size,
+        shuffle=True,
+        verbose=2,
+        callbacks=callbacks,
+    )
+    y_pred = model.predict(X_test, batch_size=batch_size, verbose=0).reshape(-1)
+    return model, history, y_pred
+
+
 def evaluate_production_model(X_test: np.ndarray, y_test: np.ndarray) -> dict[str, Any]:
     if not PRODUCTION_MODEL_PATH.exists():
         return {
@@ -343,6 +381,104 @@ def evaluate_production_model(X_test: np.ndarray, y_test: np.ndarray) -> dict[st
         "available": True,
         "metrics": metrics_dict(y_test, y_pred),
     }
+
+
+def choose_validation_batteries(train_battery_ids: list[str], seed: int) -> tuple[set[str], set[str]]:
+    if len(train_battery_ids) < 2:
+        raise ValueError("Cross-validation requires at least three batteries.")
+
+    rng = np.random.default_rng(seed)
+    shuffled = np.array(sorted(train_battery_ids))
+    rng.shuffle(shuffled)
+    validation_count = max(1, int(round(len(shuffled) * 0.20)))
+    validation_ids = set(shuffled[:validation_count])
+    final_train_ids = set(shuffled[validation_count:])
+
+    if not final_train_ids:
+        final_train_ids = {shuffled[-1]}
+        validation_ids = set(shuffled[:-1])
+
+    return final_train_ids, validation_ids
+
+
+def run_leave_one_battery_out_cv(
+    cycle_df: pd.DataFrame,
+    output_dir: Path,
+    epochs: int,
+    patience: int,
+    batch_size: int,
+    seed: int,
+) -> dict[str, Any]:
+    battery_ids = sorted(cycle_df["battery_id"].unique().tolist())
+    if len(battery_ids) < 3:
+        return {
+            "available": False,
+            "reason": "Cross-validation requires at least three batteries.",
+        }
+
+    cv_dir = output_dir / "cross_validation"
+    cv_dir.mkdir(parents=True, exist_ok=True)
+    fold_rows: list[dict[str, Any]] = []
+
+    for fold_number, test_battery in enumerate(battery_ids, start=1):
+        train_candidates = [battery for battery in battery_ids if battery != test_battery]
+        train_ids, val_ids = choose_validation_batteries(train_candidates, seed + fold_number)
+
+        train_raw = cycle_df[cycle_df["battery_id"].isin(train_ids)].copy()
+        val_raw = cycle_df[cycle_df["battery_id"].isin(val_ids)].copy()
+        test_raw = cycle_df[cycle_df["battery_id"] == test_battery].copy()
+        validate_split_has_windows(train_raw, val_raw, test_raw)
+
+        scaler = fit_scaler(train_raw)
+        train_df = apply_scaler(train_raw, scaler)
+        val_df = apply_scaler(val_raw, scaler)
+        test_df = apply_scaler(test_raw, scaler)
+
+        X_train, y_train, _ = create_windows(train_df)
+        X_val, y_val, _ = create_windows(val_df)
+        X_test, y_test, test_metadata = create_windows(test_df)
+
+        _, _, y_pred = train_and_predict(
+            X_train,
+            y_train,
+            X_val,
+            y_val,
+            X_test,
+            epochs=epochs,
+            patience=patience,
+            batch_size=batch_size,
+        )
+        fold_metrics = metrics_dict(y_test, y_pred)
+        fold_row = {
+            "fold": fold_number,
+            "test_battery": test_battery,
+            "train_batteries": ",".join(sorted(train_ids)),
+            "validation_batteries": ",".join(sorted(val_ids)),
+            **fold_metrics,
+        }
+        fold_rows.append(fold_row)
+
+        fold_predictions = test_metadata.copy()
+        fold_predictions["true_RUL"] = y_test
+        fold_predictions["predicted_RUL"] = y_pred
+        fold_predictions["prediction_error"] = fold_predictions["predicted_RUL"] - fold_predictions["true_RUL"]
+        fold_predictions.to_csv(cv_dir / f"fold_{fold_number}_{test_battery}_predictions.csv", index=False)
+
+    fold_df = pd.DataFrame(fold_rows)
+    fold_df.to_csv(cv_dir / "fold_metrics.csv", index=False)
+    aggregate = {
+        "available": True,
+        "fold_count": int(len(fold_df)),
+        "mae_mean": float(fold_df["mae"].mean()),
+        "mae_std": float(fold_df["mae"].std(ddof=0)),
+        "rmse_mean": float(fold_df["rmse"].mean()),
+        "rmse_std": float(fold_df["rmse"].std(ddof=0)),
+        "r2_mean": float(fold_df["r2"].mean()),
+        "r2_std": float(fold_df["r2"].std(ddof=0)),
+        "fold_metrics_path": str(cv_dir / "fold_metrics.csv"),
+    }
+    save_json(aggregate, cv_dir / "aggregate_metrics.json")
+    return aggregate
 
 
 def compare_models(candidate_metrics: dict[str, float], production_uploaded: dict[str, Any]) -> dict[str, Any]:
@@ -409,30 +545,32 @@ def main() -> None:
     X_val, y_val, val_metadata = create_windows(val_df)
     X_test, y_test, test_metadata = create_windows(test_df)
 
-    model = build_model(sequence_length=X_train.shape[1], input_dim=X_train.shape[2])
-    callbacks = [
-        tf.keras.callbacks.EarlyStopping(
-            monitor="val_loss",
-            patience=args.patience,
-            restore_best_weights=True,
-            verbose=1,
-        )
-    ]
-    history = model.fit(
+    model, history, y_pred = train_and_predict(
         X_train,
         y_train,
-        validation_data=(X_val, y_val),
+        X_val,
+        y_val,
+        X_test,
         epochs=args.epochs,
+        patience=args.patience,
         batch_size=args.batch_size,
-        shuffle=True,
-        verbose=2,
-        callbacks=callbacks,
     )
 
-    y_pred = model.predict(X_test, batch_size=args.batch_size, verbose=0).reshape(-1)
     candidate_metrics = metrics_dict(y_test, y_pred)
     production_uploaded = evaluate_production_model(X_test, y_test)
     comparison = compare_models(candidate_metrics, production_uploaded)
+    cross_validation = (
+        run_leave_one_battery_out_cv(
+            cycle_df,
+            output_dir,
+            epochs=args.epochs,
+            patience=args.patience,
+            batch_size=args.batch_size,
+            seed=args.seed,
+        )
+        if args.cross_validate
+        else {"available": False, "reason": "Cross-validation was not requested."}
+    )
 
     predictions_df = test_metadata.copy()
     predictions_df["true_RUL"] = y_test
@@ -468,6 +606,7 @@ def main() -> None:
         "candidate_metrics": candidate_metrics,
         "production_on_uploaded_test": production_uploaded,
         "comparison": comparison,
+        "cross_validation": cross_validation,
         "dataset_summary": dataset_summary,
         "config": asdict(config),
     }
