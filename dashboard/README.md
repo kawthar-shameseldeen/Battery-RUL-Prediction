@@ -31,13 +31,15 @@ python -m streamlit run dashboard/app.py
 
 ## What The Dashboard Shows
 
+- `Overview`: the redesigned client dashboard with the new visual style, sidebar, summary cards, and circular RUL widgets.
+- `Prediction Lab`: a dedicated page for checking battery health from the official test set, processed project data, or an uploaded client CSV.
+- `Training Center`: a separate admin page for uploading new training datasets and running candidate model retraining.
+- `Model Insights`: a dedicated page for technical metrics, XAI charts, and experiment figures.
 - A simple battery health status: Healthy, Warning, or Critical.
 - Estimated remaining useful life in cycles.
 - A recommended action for the user.
 - An estimated end-of-life cycle.
 - A battery RUL trend chart.
-- Optional technical sections for model metrics, raw validation values, and experiment figures.
-- An Explainable AI section showing why the GLU model relies on certain battery signals.
 
 ## Data Source Modes
 
@@ -111,6 +113,7 @@ The training workflow:
 - creates 10-cycle windows.
 - trains the selected GLU architecture.
 - evaluates MAE, RMSE, and R2.
+- optionally runs leave-one-battery-out cross-validation for candidate stability.
 - compares the candidate against the production model when available.
 - saves the candidate under `model_registry/candidates`.
 - provides a View Details section for each candidate, including metrics, comparison rule, dataset summary, plots, and prediction preview.
