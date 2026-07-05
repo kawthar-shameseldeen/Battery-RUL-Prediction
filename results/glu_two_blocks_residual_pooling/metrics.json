@@ -1,0 +1,32 @@
+{
+  "mae": 27.442333221435547,
+  "rmse": 31.880038472802127,
+  "r2": 0.5175616145133972,
+  "test_loss_mse": 1016.3368530273438,
+  "test_metric_mae": 27.442333221435547,
+  "feature_columns": [
+    "chI",
+    "chV",
+    "chT",
+    "disI",
+    "disV",
+    "BCt",
+    "SOH"
+  ],
+  "window_size": 10,
+  "train_shape": [
+    318,
+    10,
+    7
+  ],
+  "val_shape": [
+    123,
+    10,
+    7
+  ],
+  "test_shape": [
+    159,
+    10,
+    7
+  ]
+}
