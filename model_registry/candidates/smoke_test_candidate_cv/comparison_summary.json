@@ -1,0 +1,94 @@
+{
+  "candidate_metrics": {
+    "mae": 60.46527099609375,
+    "rmse": 70.06647931384522,
+    "r2": -2.8942184448242188
+  },
+  "production_on_uploaded_test": {
+    "available": true,
+    "metrics": {
+      "mae": 8.147163391113281,
+      "rmse": 11.728356088892065,
+      "r2": 0.8908876180648804
+    }
+  },
+  "comparison": {
+    "reference": "production_model_on_uploaded_test_split",
+    "reference_metrics": {
+      "mae": 8.147163391113281,
+      "rmse": 11.728356088892065,
+      "r2": 0.8908876180648804
+    },
+    "candidate_metrics": {
+      "mae": 60.46527099609375,
+      "rmse": 70.06647931384522,
+      "r2": -2.8942184448242188
+    },
+    "rmse_improvement_fraction": -4.9741091405133275,
+    "rmse_improvement_percent": -497.4109140513327,
+    "mae_not_worse": false,
+    "r2_not_worse": false,
+    "recommendation": "keep_current_model",
+    "decision_rule": "Recommend update only if RMSE improves by at least 5% and MAE is not worse."
+  },
+  "cross_validation": {
+    "available": true,
+    "fold_count": 4,
+    "mae_mean": 74.37203788757324,
+    "mae_std": 7.805999588658449,
+    "rmse_mean": 86.04907819373771,
+    "rmse_std": 9.008851951962962,
+    "r2_mean": -2.9485074281692505,
+    "r2_std": 0.011926358604700784,
+    "fold_metrics_path": "model_registry\\candidates\\smoke_test_candidate_cv\\cross_validation\\fold_metrics.csv"
+  },
+  "dataset_summary": {
+    "rows": 185721,
+    "cycle_rows_after_aggregation": 636,
+    "battery_ids": [
+      "B18",
+      "B5",
+      "B6",
+      "B7"
+    ],
+    "split_strategy": "battery_wise_70_15_15",
+    "train_shape": [
+      318,
+      10,
+      7
+    ],
+    "val_shape": [
+      159,
+      10,
+      7
+    ],
+    "test_shape": [
+      123,
+      10,
+      7
+    ]
+  },
+  "config": {
+    "uploaded_dataset_path": "data\\raw\\Battery_dataset.csv",
+    "output_dir": "model_registry\\candidates\\smoke_test_candidate_cv",
+    "split_strategy": "battery_wise_70_15_15",
+    "feature_columns": [
+      "chI",
+      "chV",
+      "chT",
+      "disI",
+      "disV",
+      "BCt",
+      "SOH"
+    ],
+    "window_size": 10,
+    "batch_size": 32,
+    "epochs": 1,
+    "patience": 1,
+    "learning_rate": 0.001,
+    "hidden_dim": 32,
+    "dropout": 0.15,
+    "dense_units": 16,
+    "seed": 42
+  }
+}

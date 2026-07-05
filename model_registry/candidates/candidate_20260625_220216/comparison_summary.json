@@ -1,0 +1,83 @@
+{
+  "candidate_metrics": {
+    "mae": 16.556882858276367,
+    "rmse": 21.15577108948348,
+    "r2": 0.6449761986732483
+  },
+  "production_on_uploaded_test": {
+    "available": true,
+    "metrics": {
+      "mae": 8.147163391113281,
+      "rmse": 11.728356088892065,
+      "r2": 0.8908876180648804
+    }
+  },
+  "comparison": {
+    "reference": "production_model_on_uploaded_test_split",
+    "reference_metrics": {
+      "mae": 8.147163391113281,
+      "rmse": 11.728356088892065,
+      "r2": 0.8908876180648804
+    },
+    "candidate_metrics": {
+      "mae": 16.556882858276367,
+      "rmse": 21.15577108948348,
+      "r2": 0.6449761986732483
+    },
+    "rmse_improvement_fraction": -0.8038138447655189,
+    "rmse_improvement_percent": -80.38138447655189,
+    "mae_not_worse": false,
+    "r2_not_worse": false,
+    "recommendation": "keep_current_model",
+    "decision_rule": "Recommend update only if RMSE improves by at least 5% and MAE is not worse."
+  },
+  "dataset_summary": {
+    "rows": 185721,
+    "cycle_rows_after_aggregation": 636,
+    "battery_ids": [
+      "B18",
+      "B5",
+      "B6",
+      "B7"
+    ],
+    "split_strategy": "battery_wise_70_15_15",
+    "train_shape": [
+      318,
+      10,
+      7
+    ],
+    "val_shape": [
+      159,
+      10,
+      7
+    ],
+    "test_shape": [
+      123,
+      10,
+      7
+    ]
+  },
+  "config": {
+    "uploaded_dataset_path": "data\\raw\\Battery_dataset.csv",
+    "output_dir": "C:\\Users\\hp\\Desktop\\Battery-RUL-Prediction\\model_registry\\candidates\\candidate_20260625_220216",
+    "split_strategy": "battery_wise_70_15_15",
+    "feature_columns": [
+      "chI",
+      "chV",
+      "chT",
+      "disI",
+      "disV",
+      "BCt",
+      "SOH"
+    ],
+    "window_size": 10,
+    "batch_size": 32,
+    "epochs": 30,
+    "patience": 10,
+    "learning_rate": 0.001,
+    "hidden_dim": 32,
+    "dropout": 0.15,
+    "dense_units": 16,
+    "seed": 42
+  }
+}
