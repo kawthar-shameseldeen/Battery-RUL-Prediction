@@ -69,13 +69,13 @@ st.markdown(
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap');
 
     :root {
-        --ink: #1d1a17;
-        --muted: #756b62;
+        --ink: #162332;
+        --muted: #5d7289;
         --paper: rgba(255, 255, 255, 0.88);
-        --paper-soft: rgba(250, 246, 240, 0.82);
-        --accent: #ea744a;
-        --dark: #4f4f4f;
-        --dark-2: #3f3f3f;
+        --paper-soft: rgba(241, 247, 255, 0.84);
+        --accent: #2f7de1;
+        --dark: #2c4f78;
+        --dark-2: #213d5e;
     }
 
     html, body, [class*="css"] {
@@ -85,8 +85,8 @@ st.markdown(
     .stApp {
         background:
             radial-gradient(circle at top left, rgba(255,255,255,0.86), transparent 30rem),
-            radial-gradient(circle at top right, rgba(234, 116, 74, 0.13), transparent 20rem),
-            linear-gradient(180deg, #d9d3cc 0%, #cec8c0 100%);
+            radial-gradient(circle at top right, rgba(47, 125, 225, 0.16), transparent 20rem),
+            linear-gradient(180deg, #d9e3ef 0%, #ccd7e4 100%);
         color: var(--ink);
     }
 
@@ -113,7 +113,7 @@ st.markdown(
     }
 
     .rail-shell {
-        background: linear-gradient(180deg, #5c5c5c 0%, #4d4d4d 28%, #444444 100%);
+        background: linear-gradient(180deg, #3c5e87 0%, #315276 32%, #284567 100%);
         border-radius: 2.2rem;
         width: 100%;
         max-width: 102px;
@@ -137,7 +137,7 @@ st.markdown(
         width: 3.65rem;
         height: 3.65rem;
         border-radius: 999px;
-        background: linear-gradient(180deg, #ffffff 0%, #f4ede5 100%);
+        background: linear-gradient(180deg, #ffffff 0%, #eaf3ff 100%);
         color: var(--accent);
         display: grid;
         place-items: center;
@@ -190,7 +190,7 @@ st.markdown(
     }
 
     .rail-link.active .rail-icon {
-        background: linear-gradient(180deg, #ffffff 0%, #f4ede5 100%);
+        background: linear-gradient(180deg, #ffffff 0%, #eaf3ff 100%);
         color: var(--accent);
         box-shadow: 0 12px 22px rgba(20, 20, 20, 0.15);
     }
@@ -236,15 +236,15 @@ st.markdown(
 
     .hero-panel,
     .ui-card {
-        background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,243,237,0.84));
+        background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(240,246,255,0.87));
         border: 1px solid rgba(255,255,255,0.65);
         padding: 1.4rem;
     }
 
     .chat-panel {
         background:
-            radial-gradient(circle at top center, rgba(234,116,74,0.2), transparent 36%),
-            linear-gradient(180deg, rgba(248,245,241,0.9), rgba(240,234,226,0.88));
+            radial-gradient(circle at top center, rgba(47,125,225,0.18), transparent 36%),
+            linear-gradient(180deg, rgba(247,250,255,0.92), rgba(234,242,252,0.9));
         border: 1px solid rgba(255,255,255,0.65);
         padding: 1.35rem;
     }
@@ -257,7 +257,7 @@ st.markdown(
         padding: 0.4rem 0.76rem;
         font-size: 0.74rem;
         font-weight: 800;
-        background: rgba(234,116,74,0.14);
+        background: rgba(47,125,225,0.13);
         color: var(--accent);
         margin-bottom: 0.95rem;
         text-transform: uppercase;
@@ -265,7 +265,7 @@ st.markdown(
     }
 
     .chat-chip {
-        background: linear-gradient(135deg, #f2946c, #e36b3e);
+        background: linear-gradient(135deg, #5ca4ff, #2f7de1);
         color: white;
         text-transform: none;
         letter-spacing: 0;
@@ -292,8 +292,8 @@ st.markdown(
         margin-top: 1.2rem;
         padding: 0.85rem 1rem;
         border-radius: 1.3rem;
-        background: rgba(247,242,236,0.92);
-        border: 1px solid rgba(58, 48, 42, 0.06);
+        background: rgba(238, 246, 255, 0.92);
+        border: 1px solid rgba(56, 95, 142, 0.08);
     }
 
     .progress-meta {
@@ -307,23 +307,23 @@ st.markdown(
     .track {
         height: 0.85rem;
         border-radius: 999px;
-        background: rgba(70, 60, 55, 0.09);
+        background: rgba(61, 102, 152, 0.12);
         overflow: hidden;
     }
 
     .fill {
         height: 100%;
         border-radius: 999px;
-        background: linear-gradient(90deg, #f1a07f 0%, #ea744a 100%);
+        background: linear-gradient(90deg, #7cb6ff 0%, #2f7de1 100%);
     }
 
     .bubble {
         background: rgba(255,255,255,0.9);
         border-radius: 1.1rem;
         padding: 0.86rem 0.92rem;
-        box-shadow: 0 14px 28px rgba(80, 68, 58, 0.08);
+        box-shadow: 0 14px 28px rgba(41, 79, 123, 0.08);
         margin-bottom: 0.7rem;
-        color: #332d28;
+        color: #24384d;
     }
 
     .bubble-label,
@@ -361,19 +361,19 @@ st.markdown(
         margin-top: 1rem;
         border-radius: 1.25rem;
         padding: 0.9rem 1rem;
-        background: rgba(57, 50, 45, 0.92);
+        background: rgba(41, 77, 119, 0.94);
         color: rgba(255,255,255,0.9);
         font-size: 0.86rem;
         line-height: 1.55;
     }
 
     .section-card {
-        background: linear-gradient(180deg, rgba(255,255,255,0.84), rgba(245,240,234,0.78));
+        background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(236,244,255,0.8));
         border-radius: 1.5rem;
         padding: 1.1rem;
         border: 1px solid rgba(255,255,255,0.64);
         margin-bottom: 1rem;
-        box-shadow: 0 14px 34px rgba(83, 71, 62, 0.08);
+        box-shadow: 0 14px 34px rgba(41, 79, 123, 0.08);
     }
 
     .section-title {
@@ -439,7 +439,7 @@ st.markdown(
         inset: 0.8rem;
         border-radius: 999px;
         background: rgba(255,255,255,0.92);
-        box-shadow: inset 0 0 0 1px rgba(83, 71, 62, 0.06);
+        box-shadow: inset 0 0 0 1px rgba(59, 95, 140, 0.08);
     }
 
     .ring-center {
@@ -470,10 +470,10 @@ st.markdown(
         width: 100%;
         border: 0;
         border-radius: 1rem;
-        background: linear-gradient(135deg, #ef9a79 0%, #e36a3d 100%);
+        background: linear-gradient(135deg, #62a8ff 0%, #2f7de1 100%);
         color: white;
         font-weight: 800;
-        box-shadow: 0 14px 28px rgba(227, 106, 61, 0.2);
+        box-shadow: 0 14px 28px rgba(47, 125, 225, 0.24);
         padding: 0.82rem 1rem;
     }
 
@@ -482,7 +482,7 @@ st.markdown(
         border: 1px solid rgba(255,255,255,0.54);
         border-radius: 1.2rem;
         padding: 0.85rem 1rem;
-        box-shadow: 0 12px 30px rgba(83, 71, 62, 0.08);
+        box-shadow: 0 12px 30px rgba(41, 79, 123, 0.08);
     }
 
     [data-testid="stMetricLabel"] {
@@ -501,7 +501,7 @@ st.markdown(
     [data-testid="stNumberInput"] input {
         border-radius: 1rem !important;
         background: rgba(255,255,255,0.74) !important;
-        border: 1px solid rgba(83, 71, 62, 0.12) !important;
+        border: 1px solid rgba(59, 95, 140, 0.12) !important;
     }
 
     [data-testid="stWidgetLabel"],
@@ -519,15 +519,15 @@ st.markdown(
     }
 
     [data-testid="stFileUploader"] button {
-        background: linear-gradient(180deg, rgba(255, 243, 247, 0.98), rgba(255, 236, 242, 0.95)) !important;
-        color: #8d6170 !important;
-        border: 1px solid rgba(222, 170, 186, 0.42) !important;
+        background: linear-gradient(180deg, rgba(241, 247, 255, 0.98), rgba(231, 241, 255, 0.96)) !important;
+        color: #456a93 !important;
+        border: 1px solid rgba(145, 179, 219, 0.42) !important;
         box-shadow: none !important;
     }
 
     [data-testid="stFileUploader"] button:hover {
-        background: rgba(255, 232, 239, 0.98) !important;
-        color: #744f5b !important;
+        background: rgba(226, 239, 255, 0.98) !important;
+        color: #30557d !important;
     }
 
     [data-baseweb="select"] input,
@@ -540,6 +540,22 @@ st.markdown(
         color: #6a5c50 !important;
     }
 
+    [data-baseweb="slider"] [role="slider"] {
+        background: #2f7de1 !important;
+        border-color: #2f7de1 !important;
+        box-shadow: 0 0 0 4px rgba(47, 125, 225, 0.16) !important;
+    }
+
+    [data-baseweb="slider"] [style*="rgb(255, 75, 75)"],
+    [data-baseweb="slider"] [style*="#ff4b4b"] {
+        background: #2f7de1 !important;
+    }
+
+    [data-baseweb="slider"] [style*="rgb(255, 75, 75)"] *,
+    [data-baseweb="slider"] [style*="#ff4b4b"] * {
+        color: #6a5c50 !important;
+    }
+
     [data-testid="stCheckbox"] label,
     [data-testid="stCheckbox"] span,
     [data-testid="stCheckbox"] div {
@@ -547,18 +563,18 @@ st.markdown(
     }
 
     [data-testid="stCheckbox"] input {
-        accent-color: #e9a6b7 !important;
+        accent-color: #7fb1ea !important;
     }
 
     [data-testid="stCheckbox"] [role="checkbox"] {
-        background: linear-gradient(180deg, rgba(255, 243, 247, 0.98), rgba(255, 236, 242, 0.95)) !important;
-        border: 1px solid rgba(222, 170, 186, 0.42) !important;
+        background: linear-gradient(180deg, rgba(241, 247, 255, 0.98), rgba(231, 241, 255, 0.96)) !important;
+        border: 1px solid rgba(145, 179, 219, 0.42) !important;
         box-shadow: none !important;
     }
 
     [data-testid="stCheckbox"] [role="checkbox"][aria-checked="true"] {
-        background: #e9a6b7 !important;
-        border-color: #e9a6b7 !important;
+        background: #7fb1ea !important;
+        border-color: #7fb1ea !important;
     }
 
     [data-testid="stExpander"] details summary,
@@ -569,11 +585,11 @@ st.markdown(
     }
 
     [data-testid="stNumberInput"] > div {
-        background: linear-gradient(180deg, rgba(255, 243, 247, 0.98), rgba(255, 236, 242, 0.95)) !important;
-        border: 1px solid rgba(222, 170, 186, 0.42) !important;
+        background: linear-gradient(180deg, rgba(241, 247, 255, 0.98), rgba(231, 241, 255, 0.96)) !important;
+        border: 1px solid rgba(145, 179, 219, 0.42) !important;
         border-radius: 1rem !important;
         overflow: hidden !important;
-        box-shadow: 0 10px 24px rgba(212, 169, 182, 0.12) !important;
+        box-shadow: 0 10px 24px rgba(127, 177, 234, 0.12) !important;
     }
 
     [data-testid="stNumberInput"] [data-baseweb="input"] {
@@ -591,22 +607,22 @@ st.markdown(
     }
 
     [data-testid="stNumberInput"] input {
-        color: #6d4d58 !important;
+        color: #456a93 !important;
         background: transparent !important;
         box-shadow: none !important;
         font-weight: 700 !important;
     }
 
     [data-testid="stNumberInput"] button {
-        background: rgba(255, 248, 250, 0.98) !important;
-        color: #9a6677 !important;
-        border-left: 1px solid rgba(222, 170, 186, 0.35) !important;
+        background: rgba(247, 251, 255, 0.98) !important;
+        color: #50759f !important;
+        border-left: 1px solid rgba(145, 179, 219, 0.35) !important;
         border-radius: 0 !important;
     }
 
     [data-testid="stNumberInput"] button:hover {
-        background: rgba(255, 236, 242, 1) !important;
-        color: #7f5563 !important;
+        background: rgba(231, 241, 255, 1) !important;
+        color: #30557d !important;
     }
 
     [data-testid="stNumberInput"] svg {

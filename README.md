@@ -436,6 +436,12 @@ To generate XAI outputs for the approved GLU model:
 ```powershell
 python scripts/explain_glu_two_blocks_pooling.py
 ```
+## Repository Structure
+
+- `data/processed/` → processed dataset, train/test datasets, and split file
+- `notebook/` → preprocessing notebook
+- `figures/` → saved plots and visualizations
+- `results/` → model outputs and evaluation results
 
 ## Repository Structure
 
