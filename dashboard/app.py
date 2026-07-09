@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 import json
+import math
 import re
 import subprocess
 import sys
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote_plus
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import requests
 import streamlit as st
@@ -83,6 +85,7 @@ st.markdown(
     }
 
     .stApp {
+        --primary-color: #2f7de1;
         background:
             radial-gradient(circle at top left, rgba(255,255,255,0.86), transparent 30rem),
             radial-gradient(circle at top right, rgba(47, 125, 225, 0.16), transparent 20rem),
@@ -390,6 +393,57 @@ st.markdown(
         margin-bottom: 0.95rem;
     }
 
+    .table-shell {
+        background: linear-gradient(180deg, rgba(240,247,255,0.96), rgba(225,237,253,0.9));
+        border: 1px solid rgba(171, 199, 231, 0.55);
+        border-radius: 1.35rem;
+        box-shadow: 0 14px 30px rgba(41, 79, 123, 0.10);
+        overflow: hidden;
+    }
+
+    .table-scroll {
+        overflow-x: auto;
+    }
+
+    .ui-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 520px;
+    }
+
+    .ui-table thead th {
+        background: linear-gradient(180deg, rgba(198, 221, 247, 0.92), rgba(184, 211, 243, 0.88));
+        color: #3f6188;
+        font-size: 0.77rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.82rem 0.9rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(104, 148, 199, 0.26);
+    }
+
+    .ui-table tbody td {
+        color: #17314f;
+        font-size: 0.9rem;
+        padding: 0.8rem 0.9rem;
+        border-bottom: 1px solid rgba(124, 161, 205, 0.18);
+        background: rgba(244, 249, 255, 0.82);
+    }
+
+    .ui-table tbody tr:nth-child(even) td {
+        background: rgba(229, 240, 253, 0.88);
+    }
+
+    .ui-table tbody tr:hover td {
+        background: rgba(206, 227, 251, 0.94);
+    }
+
+    .ui-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
     .status-banner {
         border-radius: 1.35rem;
         padding: 1rem 1.1rem;
@@ -546,12 +600,23 @@ st.markdown(
         box-shadow: 0 0 0 4px rgba(47, 125, 225, 0.16) !important;
     }
 
+    [data-testid="stSlider"] * {
+        --primary-color: #2f7de1 !important;
+    }
+
     [data-baseweb="slider"] [style*="rgb(255, 75, 75)"],
-    [data-baseweb="slider"] [style*="#ff4b4b"] {
+    [data-baseweb="slider"] [style*="rgb(255,75,75)"],
+    [data-baseweb="slider"] [style*="#ff4b4b"],
+    [data-baseweb="slider"] [style*="background-color: rgb(255, 75, 75)"],
+    [data-baseweb="slider"] [style*="background-color: rgb(255,75,75)"] {
         background: #2f7de1 !important;
+        background-color: #2f7de1 !important;
+        border-color: #2f7de1 !important;
+        color: #2f7de1 !important;
     }
 
     [data-baseweb="slider"] [style*="rgb(255, 75, 75)"] *,
+    [data-baseweb="slider"] [style*="rgb(255,75,75)"] *,
     [data-baseweb="slider"] [style*="#ff4b4b"] * {
         color: #6a5c50 !important;
     }
@@ -582,6 +647,34 @@ st.markdown(
     [data-testid="stExpander"] [data-testid="stExpanderToggleIcon"] {
         color: #6a5c50 !important;
         fill: #6a5c50 !important;
+    }
+
+    [data-testid="stExpander"] {
+        background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(236,244,255,0.84)) !important;
+        border: 1px solid rgba(255,255,255,0.65) !important;
+        border-radius: 1.2rem !important;
+        overflow: hidden !important;
+        box-shadow: 0 14px 30px rgba(41, 79, 123, 0.08) !important;
+        margin-top: 0.35rem !important;
+        margin-left: 0.2rem !important;
+        margin-right: 0.2rem !important;
+    }
+
+    [data-testid="stExpander"] details {
+        background: transparent !important;
+    }
+
+    [data-testid="stExpander"] details summary {
+        background: rgba(219, 233, 251, 0.72) !important;
+        border-bottom: 1px solid rgba(124, 161, 205, 0.18) !important;
+        border-radius: 0 !important;
+    }
+
+    [data-testid="stExpander"] details summary,
+    [data-testid="stExpander"] details summary *,
+    [data-testid="stExpander"] [data-testid="stExpanderToggleIcon"] {
+        color: #486587 !important;
+        fill: #486587 !important;
     }
 
     [data-testid="stNumberInput"] > div {
@@ -824,24 +917,24 @@ def status_style(status: str) -> dict[str, str]:
         "healthy": {
             "client_label": "Battery is healthy",
             "short_label": "Healthy",
-            "color": "#3a8d5c",
-            "background": "rgba(58, 141, 92, 0.12)",
+            "color": "#2f7de1",
+            "background": "rgba(47, 125, 225, 0.12)",
             "message": "The battery still has a comfortable cycle reserve and can continue normal operation.",
             "action": "No immediate action needed.",
         },
         "warning": {
             "client_label": "Battery needs attention",
             "short_label": "Warning",
-            "color": "#c9862b",
-            "background": "rgba(201, 134, 43, 0.12)",
+            "color": "#4a97f0",
+            "background": "rgba(74, 151, 240, 0.13)",
             "message": "The remaining useful life is narrowing, so this battery should be monitored more closely.",
             "action": "Prepare a replacement or maintenance plan.",
         },
         "critical": {
             "client_label": "Battery is critical",
             "short_label": "Critical",
-            "color": "#cb5841",
-            "background": "rgba(203, 88, 65, 0.12)",
+            "color": "#1f5fb8",
+            "background": "rgba(31, 95, 184, 0.14)",
             "message": "The battery is close to failure according to the current model and should not be trusted for critical work.",
             "action": "Inspect or replace immediately.",
         },
@@ -893,6 +986,114 @@ def render_section_header(title: str, copy: str) -> None:
         <div class="section-card">
             <div class="section-title">{title}</div>
             <div class="section-copy">{copy}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_light_table(dataframe: pd.DataFrame) -> None:
+    if dataframe.empty:
+        st.info("No table data is available.")
+        return
+
+    display_df = dataframe.copy()
+    for column in display_df.select_dtypes(include=["float", "float64", "float32"]).columns:
+        display_df[column] = display_df[column].map(lambda value: f"{value:.4f}")
+
+    table_html = display_df.to_html(index=False, classes="ui-table", border=0, escape=True)
+    st.markdown(
+        f"""
+        <div class="table-shell">
+            <div class="table-scroll">
+                {table_html}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_light_line_chart(dataframe: pd.DataFrame, x_col: str, y_cols: list[str], *, height: float = 3.2) -> None:
+    if dataframe.empty:
+        st.info("No chart data is available.")
+        return
+
+    chart_df = dataframe.loc[:, [x_col, *y_cols]].copy()
+    fig, ax = plt.subplots(figsize=(6.4, height))
+    fig.patch.set_facecolor("#f6faff")
+    ax.set_facecolor("#f6faff")
+
+    palette = ["#2f7de1", "#6fb5ff", "#1f5fb8", "#9ccdfd"]
+    for index, column in enumerate(y_cols):
+        ax.plot(
+            chart_df[x_col],
+            chart_df[column],
+            color=palette[index % len(palette)],
+            linewidth=2.2,
+            label=column,
+        )
+
+    ax.grid(True, axis="y", color="#d7e5f6", linewidth=0.8)
+    ax.grid(False, axis="x")
+    for spine in ax.spines.values():
+        spine.set_color("#c8d9ee")
+    ax.tick_params(colors="#5d7289", labelsize=8)
+    ax.set_xlabel(x_col.replace("_", " ").title(), color="#5d7289", fontsize=8)
+    if len(y_cols) == 1:
+        ax.set_ylabel(y_cols[0].replace("_", " ").title(), color="#5d7289", fontsize=8)
+    else:
+        ax.legend(frameon=False, fontsize=8, loc="best")
+    plt.tight_layout()
+    st.pyplot(fig, use_container_width=True)
+    plt.close(fig)
+
+
+def render_light_bar_chart(dataframe: pd.DataFrame, x_col: str, y_col: str, *, height: float = 3.2) -> None:
+    if dataframe.empty:
+        st.info("No chart data is available.")
+        return
+
+    chart_df = dataframe.loc[:, [x_col, y_col]].copy()
+    fig, ax = plt.subplots(figsize=(6.4, height))
+    fig.patch.set_facecolor("#f6faff")
+    ax.set_facecolor("#f6faff")
+
+    bars = ax.bar(chart_df[x_col].astype(str), chart_df[y_col], color="#79b8ff", edgecolor="#4e93e8", linewidth=0.8)
+    ax.grid(True, axis="y", color="#d7e5f6", linewidth=0.8)
+    ax.grid(False, axis="x")
+    for spine in ax.spines.values():
+        spine.set_color("#c8d9ee")
+    ax.tick_params(colors="#5d7289", labelsize=8)
+    ax.set_xlabel("")
+    ax.set_ylabel(y_col.replace("_", " ").title(), color="#5d7289", fontsize=8)
+    plt.setp(ax.get_xticklabels(), rotation=0, ha="center")
+
+    if not chart_df.empty:
+        max_value = float(chart_df[y_col].max())
+        for bar in bars:
+            if math.isfinite(max_value) and max_value > 0 and bar.get_height() >= max_value * 0.85:
+                bar.set_color("#4a97f0")
+
+    plt.tight_layout()
+    st.pyplot(fig, use_container_width=True)
+    plt.close(fig)
+
+
+def render_metric_card_row(items: list[tuple[str, str]]) -> None:
+    cards_html = "".join(
+        f"""
+        <div class="ui-card" style="padding: 1rem 1.05rem;">
+            <div class="card-label">{label}</div>
+            <div class="card-title" style="font-size: 1.15rem; margin-bottom: 0;">{value}</div>
+        </div>
+        """
+        for label, value in items
+    )
+    st.markdown(
+        f"""
+        <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; margin-bottom: 0.9rem;">
+            {cards_html}
         </div>
         """,
         unsafe_allow_html=True,
@@ -987,8 +1188,8 @@ def render_result_panel_with_options(
     render_status_banner(status, predicted_rul, end_cycle)
     st.markdown(
         "<div class='ring-wrap'>"
-        + ring_card("Remaining RUL", predicted_rul, total_life, "#eb7a52", "Cycles still available before failure.")
-        + ring_card("Spent RUL", spent_cycles, total_life, "#57514d", "Cycles already consumed from the estimated life.")
+        + ring_card("Remaining RUL", predicted_rul, total_life, "#4a97f0", "Cycles still available before failure.")
+        + ring_card("Spent RUL", spent_cycles, total_life, "#244f7f", "Cycles already consumed from the estimated life.")
         + "</div>",
         unsafe_allow_html=True,
     )
@@ -1534,19 +1735,22 @@ def render_training_page() -> None:
         unsafe_allow_html=True,
     )
     if rows:
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        render_light_table(pd.DataFrame(rows))
 
     detail_col1, detail_col2 = st.columns([1, 1], gap="large")
     with detail_col1:
         with st.expander("Cross-validation details"):
             if selected_cv.get("available"):
-                cv_col1, cv_col2, cv_col3 = st.columns(3)
-                cv_col1.metric("CV MAE", f"{selected_cv.get('mae_mean', 0):.2f} +/- {selected_cv.get('mae_std', 0):.2f}")
-                cv_col2.metric("CV RMSE", f"{selected_cv.get('rmse_mean', 0):.2f} +/- {selected_cv.get('rmse_std', 0):.2f}")
-                cv_col3.metric("CV R2", f"{selected_cv.get('r2_mean', 0):.3f} +/- {selected_cv.get('r2_std', 0):.3f}")
+                render_metric_card_row(
+                    [
+                        ("CV MAE", f"{selected_cv.get('mae_mean', 0):.2f} +/- {selected_cv.get('mae_std', 0):.2f}"),
+                        ("CV RMSE", f"{selected_cv.get('rmse_mean', 0):.2f} +/- {selected_cv.get('rmse_std', 0):.2f}"),
+                        ("CV R2", f"{selected_cv.get('r2_mean', 0):.3f} +/- {selected_cv.get('r2_std', 0):.3f}"),
+                    ]
+                )
                 fold_metrics_path = Path(selected_cv.get("fold_metrics_path", ""))
                 if fold_metrics_path.exists():
-                    st.dataframe(pd.read_csv(fold_metrics_path), use_container_width=True, hide_index=True)
+                    render_light_table(pd.read_csv(fold_metrics_path))
             else:
                 st.info(selected_cv.get("reason", "Cross-validation was not available for this candidate."))
 
@@ -1586,11 +1790,11 @@ def render_insights_page(
     plot_col1, plot_col2 = st.columns(2)
     with plot_col1:
         render_section_header("Prediction Error Over Cycles", "Official B6 error trace across the test windows.")
-        st.line_chart(predictions.set_index("end_cycle")[["prediction_error"]])
+        render_light_line_chart(predictions, "end_cycle", ["prediction_error"])
     with plot_col2:
         render_section_header("Top-Level Explainability", "The strongest feature drivers for the approved GLU model.")
         if not xai_ig_feature.empty:
-            st.bar_chart(xai_ig_feature.set_index("feature")[["mean_abs_integrated_gradient"]])
+            render_light_bar_chart(xai_ig_feature, "feature", "mean_abs_integrated_gradient")
         else:
             st.info("Integrated gradients feature table was not found.")
 
@@ -1598,18 +1802,14 @@ def render_insights_page(
     with temporal_col:
         render_section_header("Temporal Importance", "Which step in the 10-cycle window matters most.")
         if not xai_temporal.empty:
-            st.line_chart(xai_temporal.set_index("window_step")[["mean_abs_integrated_gradient"]])
+            render_light_line_chart(xai_temporal, "window_step", ["mean_abs_integrated_gradient"])
         else:
             st.info("Temporal XAI table was not found.")
 
     with permutation_col:
         render_section_header("Permutation Importance", "Global importance based on the degradation in performance when a feature is shuffled.")
         if not xai_permutation.empty:
-            st.dataframe(
-                xai_permutation[["feature", "rmse_increase", "mae_increase", "r2_drop"]],
-                use_container_width=True,
-                hide_index=True,
-            )
+            render_light_table(xai_permutation[["feature", "rmse_increase", "mae_increase", "r2_drop"]])
         else:
             st.info("Permutation importance table was not found.")
 
@@ -1633,11 +1833,11 @@ def render_insights_page(
     if XAI_HEATMAP_FIGURE.exists():
         figure_col4.image(str(XAI_HEATMAP_FIGURE), caption="Feature-Time Heatmap")
 
-    exp_col1, exp_col2, exp_col3 = st.columns(3)
+    exp_col1, exp_col2, exp_col3 = st.columns([1, 0.72, 1], gap="large")
     if LOSS_CURVE_PATH.exists():
         exp_col1.image(str(LOSS_CURVE_PATH), caption="Training vs Validation Loss")
     if TRUE_VS_PRED_PATH.exists():
-        exp_col2.image(str(TRUE_VS_PRED_PATH), caption="True RUL vs Predicted RUL")
+        exp_col2.image(str(TRUE_VS_PRED_PATH), caption="True RUL vs Predicted RUL", width=245)
     if ERROR_OVER_CYCLES_PATH.exists():
         exp_col3.image(str(ERROR_OVER_CYCLES_PATH), caption="Prediction Error Over Cycles")
 
